@@ -16,7 +16,7 @@ function generateProduct(id) {
 }
 
 /**
- * Bulk index products to Elasticsearch
+ * Bulk index products to OpenSearch
  */
 async function bulkIndexProducts(products) {
     const operations = products.flatMap(product => [
@@ -26,12 +26,12 @@ async function bulkIndexProducts(products) {
 
     const response = await esClient.bulk({
         refresh: true,
-        operations
+        body: operations  // ← FIXED: 'body' not 'operations'
     });
 
-    if (response.errors) {
+    if (response.body.errors) {  // ← response.body.errors
         const erroredDocuments = [];
-        response.items.forEach((action, i) => {
+        response.body.items.forEach((action, i) => {
             const operation = Object.keys(action)[0];
             if (action[operation].error) {
                 erroredDocuments.push({
@@ -51,21 +51,18 @@ async function bulkIndexProducts(products) {
 /**
  * Main seeding function
  */
-export async function seedProducts() {
-    const TOTAL_PRODUCTS = 1000;
+export async function seedProducts(count = 1000) {
     const BATCH_SIZE = 100;
 
-    console.log('Starting product seeding...\n');
+    console.log(`Starting to seed ${count} products...\n`);
 
     try {
         // Check connection
-        console.log('Checking Elasticsearch connection...');
+        console.log('Checking OpenSearch connection...');
         const connected = await checkConnection();
         
         if (!connected) {
-            console.error('Failed to connect to Elasticsearch');
-            console.error('Make sure Elasticsearch is running on http://localhost:9200');
-            process.exit(1);
+            throw new Error('Failed to connect to OpenSearch');
         }
 
         // Setup index
@@ -73,11 +70,11 @@ export async function seedProducts() {
         await setupIndex();
 
         // Generate and index products in batches
-        console.log(`Generating ${TOTAL_PRODUCTS} products...\n`);
+        console.log(`Generating ${count} products...\n`);
         
-        for (let i = 0; i < TOTAL_PRODUCTS; i += BATCH_SIZE) {
+        for (let i = 0; i < count; i += BATCH_SIZE) {
             const batchProducts = [];
-            const batchEnd = Math.min(i + BATCH_SIZE, TOTAL_PRODUCTS);
+            const batchEnd = Math.min(i + BATCH_SIZE, count);
             
             for (let j = i; j < batchEnd; j++) {
                 batchProducts.push(generateProduct(j + 1));
@@ -85,19 +82,18 @@ export async function seedProducts() {
 
             await bulkIndexProducts(batchProducts);
             
-            const progress = ((batchEnd / TOTAL_PRODUCTS) * 100).toFixed(1);
-            console.log(`Indexed ${batchEnd}/${TOTAL_PRODUCTS} products (${progress}%)`);
+            const progress = ((batchEnd / count) * 100).toFixed(1);
+            console.log(`Indexed ${batchEnd}/${count} products (${progress}%)`);
         }
 
         // Verify count
-        const count = await esClient.count({ index: INDEX_NAME });
-        console.log(`\n Seeding complete! Total products in index: ${count.count}`);
+        const countResponse = await esClient.count({ index: INDEX_NAME });
+        console.log(`\nSeeding complete! Total products: ${countResponse.body.count}`);
+        
+        return countResponse.body.count;
         
     } catch (error) {
         console.error('Error seeding products:', error.message);
-        process.exit(1);
+        throw error;
     }
 }
-
-// Run seeding
-seedProducts();
