@@ -1,7 +1,8 @@
 # 1. Install dependencies
 npm install
 
-# 2. Start Elasticsearch. It starts Elasticsearch on http://localhost:9200 (just create .env and copypaste .env.example without changing anything)
+# 2. Start Elasticsearch. 
+It starts Elasticsearch on http://localhost:9200 (just create .env and copypaste .env.example without changing anything)
 docker-compose up -d
 you can verify if it works: curl http://localhost:9200
 # 3. Seed 1,000 products
