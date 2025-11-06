@@ -51,7 +51,7 @@ async function bulkIndexProducts(products) {
 /**
  * Main seeding function
  */
-async function seedProducts() {
+export async function seedProducts() {
     const TOTAL_PRODUCTS = 1000;
     const BATCH_SIZE = 100;
 

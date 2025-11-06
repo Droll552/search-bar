@@ -4,6 +4,8 @@ import searchRoutes from './routes/searchRoutes.js';
 import analyticsRoutes from './routes/analyticsRoutes.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { setupIndex, checkConnection } from './config/elasticsearch.js';
+import { seedProducts } from '../scripts/seedProducts.js';
+
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -15,6 +17,29 @@ app.use(express.json());
 app.use('/products', productRoutes);
 app.use('/search', searchRoutes);
 app.use('/analytics', analyticsRoutes);
+
+app.post('/admin/seed', async (req, res, next) => {
+    try {
+        const count = req.body.count || 1000;
+        const secretKey = req.headers['x-admin-secret'] || req.query.secret;
+        
+        // Simple protection (optional)
+        if (process.env.ADMIN_SECRET && secretKey !== process.env.ADMIN_SECRET) {
+            return res.status(401).json({ error: 'Unauthorized' });
+        }
+        
+        console.log(`Starting to seed ${count} products...`);
+        await seedProducts(count);
+        
+        res.json({ 
+            success: true, 
+            message: `Successfully seeded ${count} products` 
+        });
+    } catch (error) {
+        next(error);
+    }
+});
+
 
 // Health check
 app.get('/health', (req, res) => {
