@@ -1,7 +1,14 @@
 import { Client } from '@elastic/elasticsearch';
 
+const esUrl = process.env.ELASTICSEARCH_URL || 'http://localhost:9200';
+
 export const esClient = new Client({
-    node: process.env.ELASTICSEARCH_NODE || 'http://localhost:9200'
+    node: esUrl,
+    // Bonsai uses HTTPS, so we need to handle TLS
+    tls: {
+        rejectUnauthorized: false // For Bonsai's self-signed certs
+    }
+
 });
 
 export const INDEX_NAME = 'products';
